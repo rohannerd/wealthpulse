@@ -13,42 +13,36 @@ const ProtectedRoute = ({ children }) => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    let unsubscribe;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('Auth state changed:', currentUser?.uid);
+      setUser(currentUser);
 
-    const checkAuth = async () => {
-      unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        console.log('Auth state changed:', currentUser?.uid);
-        setUser(currentUser);
-        
-        if (currentUser) {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          
-          try {
-            const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-              const userData = docSnap.data();
-              console.log('Onboarding status:', userData.hasCompletedOnboarding);
-              setHasCompletedOnboarding(Boolean(userData.hasCompletedOnboarding));
-            } else {
-              setHasCompletedOnboarding(false);
-            }
-          } catch (error) {
-            console.error('Error fetching user data:', error);
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            console.log('Onboarding status:', userData.hasCompletedOnboarding);
+            setHasCompletedOnboarding(Boolean(userData.hasCompletedOnboarding));
+          } else {
             setHasCompletedOnboarding(false);
           }
-        } else {
-          setHasCompletedOnboarding(null);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setHasCompletedOnboarding(false);
         }
-        
-        setLoading(false);
-      });
-    };
+      } else {
+        setHasCompletedOnboarding(null);
+      }
 
-    checkAuth();
-    return () => unsubscribe && unsubscribe();
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
@@ -59,8 +53,9 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // Redirect unauthenticated users to the landing page
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Special case for onboarding page
