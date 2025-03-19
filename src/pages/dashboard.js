@@ -15,7 +15,7 @@ const WealthPulseDashboard = () => {
   const [userData, setUserData] = useState({
     goal: null,
     monthlyData: {},
-    assets: null, // Added to store assets field for backward compatibility
+    assets: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,24 +31,13 @@ const WealthPulseDashboard = () => {
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserData({
-            goal: data.goal || null,
-            monthlyData: data.monthlyData || {},
-            assets: data.assets || null, // Fetch assets field
-          });
-        } else {
-          setUserData({
-            goal: null,
-            monthlyData: {},
-            assets: null,
-          });
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        setError('Failed to load user data. Please try again.');
+        setError('Failed to load user data.');
       } finally {
         setLoading(false);
       }
@@ -71,6 +60,14 @@ const WealthPulseDashboard = () => {
   // Format date as YYYY-MM
   const formatYearMonth = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  // Check if the selected month is in the past
+  const isPastMonth = () => {
+    const today = new Date();
+    const formattedToday = formatYearMonth(today);
+    const formattedCurrentMonth = formatYearMonth(currentMonth);
+    return formattedCurrentMonth < formattedToday;
   };
 
   // Get current month data or initialize it if it doesn't exist
@@ -330,9 +327,9 @@ const WealthPulseDashboard = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -378,14 +375,20 @@ const WealthPulseDashboard = () => {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setShowGoalModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+            className={`flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors ${
+              isPastMonth() ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isPastMonth()}
           >
             <Target className="mr-2 h-4 w-4" />
             Set Goal
           </button>
           <button
             onClick={() => setShowAddDataModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className={`flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${
+              isPastMonth() ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isPastMonth()}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add New Data
@@ -707,7 +710,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Savings Account</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="savings"
@@ -720,7 +723,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Fixed Deposits</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="fd"
@@ -738,7 +741,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Stocks</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="stocks"
@@ -751,7 +754,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Mutual Funds</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="mutualFunds"
@@ -769,7 +772,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">NPS</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="nps"
@@ -782,7 +785,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">PPF</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="ppf"
@@ -795,7 +798,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">EPFO</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="epfo"
@@ -808,7 +811,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Crypto</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="crypto"
@@ -826,7 +829,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Gold</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="gold"
@@ -839,7 +842,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           <div>
             <label className="block text-gray-700 mb-1">Real Estate</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
               <input
                 type="number"
                 name="realEstate"
@@ -873,15 +876,20 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
 
 // Set Goal Form Component
 const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
-  const [goal, setGoal] = useState(initialGoal || 0);
+  const [goal, setGoal] = useState(initialGoal !== null ? initialGoal.toString() : ""); // Initialize as a string
 
   const handleChange = (e) => {
-    setGoal(parseFloat(e.target.value) || 0);
+    const value = e.target.value;
+    // Allow empty string or a valid number
+    if (value === "" || !isNaN(value)) {
+      setGoal(value);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(goal);
+    // Convert the goal to a number before submitting, or set it to null if empty
+    onSubmit(goal === "" ? null : parseFloat(goal));
   };
 
   return (
@@ -900,9 +908,9 @@ const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
       <div className="mb-6">
         <label className="block text-gray-700 mb-2">Target Net Worth</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
           <input
-            type="number"
+            type="text" // Use text input to allow clearing
             value={goal}
             onChange={handleChange}
             className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
