@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   TrendingUp, 
   Shield, 
@@ -21,7 +22,6 @@ const WealthPulseLanding = () => {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle signup form submission
     console.log('Signup with email:', email);
     setEmail('');
     alert('Thank you for your interest! We\'ll be in touch soon.');
@@ -39,8 +39,8 @@ const WealthPulseLanding = () => {
           <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
           <a href="#howItWorks" className="text-gray-600 hover:text-blue-600 transition-colors">How It Works</a>
           <a href="#pricing" className="text-gray-600 hover:text-blue-600 transition-colors">Pricing</a>
-          <a href="#signup" className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors">Log In</a>
-          <a href="#signup" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Sign Up</a>
+          <Link to="/login?mode=login" className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors">Log In</Link>
+          <Link to="/login?mode=signup" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Sign Up</Link>
         </div>
         <button className="md:hidden text-gray-700">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -56,7 +56,7 @@ const WealthPulseLanding = () => {
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Track Your Wealth Journey Like Never Before</h1>
             <p className="text-xl mb-8 text-blue-100">Visualize your complete financial picture. Set goals, track progress, and make informed decisions with WealthPulse.</p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-              <a href="#signup" className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-center">Get Started - It's Free</a>
+              <Link to="/login?mode=signup" className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-center">Get Started - It's Free</Link>
               <a href="#demo" className="px-6 py-3 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors text-center">See Demo</a>
             </div>
           </div>
@@ -178,7 +178,7 @@ const WealthPulseLanding = () => {
             <div className="bg-white p-8 rounded-xl shadow-sm relative">
               <div className="absolute -top-4 -left-4 bg-blue-500 text-white p-2 rounded-full">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
                 </svg>
               </div>
               <p className="text-gray-600 mb-4">"WealthPulse helped me visualize my entire financial picture for the first time. Now I can make informed decisions about my investments and savings."</p>
@@ -194,7 +194,7 @@ const WealthPulseLanding = () => {
             <div className="bg-white p-8 rounded-xl shadow-sm relative">
               <div className="absolute -top-4 -left-4 bg-blue-500 text-white p-2 rounded-full">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
                 </svg>
               </div>
               <p className="text-gray-600 mb-4">"Setting financial goals was always abstract for me until WealthPulse. The visual dashboard keeps me motivated and on track toward my targets."</p>
@@ -210,7 +210,7 @@ const WealthPulseLanding = () => {
             <div className="bg-white p-8 rounded-xl shadow-sm relative">
               <div className="absolute -top-4 -left-4 bg-blue-500 text-white p-2 rounded-full">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 010-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.328.996.002 1.069c0 .527-.422.957-.95.957-.532 0-.954-.43-.954-.957l-.002-1.584-3.593-1.538a1 1 0 110-1.838l7-3zM15.949 6.263a1 1 0 00-.788 0l-7 3a1 1 0 000 1.838l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.838l-7-3zM5.023 12.194a1 1 0 01-.452-.105l-3.571-1.532a1 1 0 110-1.84l3.571-1.532a1 1 0 011.356.538 1 1 0 01-.538 1.356l-2.118.907 2.118.908a1 1 0 11-.452 1.842l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842l-3.916-1.678-3.32 1.42 3.32 1.425a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-4.772-2.046-2.215.951 2.215.951a1 1 0 01.452 1.338 1 1 0 01-1.338.452l-3.916-1.678-1.89.811a1 1 0 01-.787 0l-7-3a1 1 0 01-1.838l7-3a1 1 0 01.787 0l5.391 2.313a1 1 0 01-.452 1.842z"></path>
                 </svg>
               </div>
               <p className="text-gray-600 mb-4">"I love how WealthPulse gives me a breakdown of my assets. It's helped me diversify my portfolio and made me more confident about my financial future."</p>
@@ -261,7 +261,7 @@ const WealthPulseLanding = () => {
                 </ul>
               </div>
               <div className="px-8 pb-8">
-                <a href="#signup" className="block w-full py-3 px-4 bg-gray-100 text-center rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors">Get Started</a>
+                <Link to="/login?mode=signup" className="block w-full py-3 px-4 bg-gray-100 text-center rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors">Get Started</Link>
               </div>
             </div>
             
@@ -298,7 +298,7 @@ const WealthPulseLanding = () => {
                 </ul>
               </div>
               <div className="px-8 pb-8">
-                <a href="#signup" className="block w-full py-3 px-4 bg-blue-600 text-center rounded-lg font-medium text-white hover:bg-blue-700 transition-colors">Get Started</a>
+                <Link to="/login?mode=signup" className="block w-full py-3 px-4 bg-blue-600 text-center rounded-lg font-medium text-white hover:bg-blue-700 transition-colors">Get Started</Link>
               </div>
             </div>
             
@@ -312,7 +312,6 @@ const WealthPulseLanding = () => {
                 <p className="text-gray-600 mb-6">For wealth managers and financial advisors.</p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center">
-                    
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span className="text-gray-600">Everything in Premium</span>
                   </li>
@@ -335,7 +334,7 @@ const WealthPulseLanding = () => {
                 </ul>
               </div>
               <div className="px-8 pb-8">
-                <a href="#signup" className="block w-full py-3 px-4 bg-gray-100 text-center rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors">Contact Sales</a>
+                <Link to="/login?mode=signup" className="block w-full py-3 px-4 bg-gray-100 text-center rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors">Contact Sales</Link>
               </div>
             </div>
           </div>
@@ -357,9 +356,9 @@ const WealthPulseLanding = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <button type="submit" className="px-6 py-3 bg-blue-900 rounded-lg font-medium hover:bg-blue-800 transition-colors flex items-center justify-center">
+            <Link to="/login?mode=signup" className="px-6 py-3 bg-blue-900 rounded-lg font-medium hover:bg-blue-800 transition-colors flex items-center justify-center">
               Get Started <ArrowRight className="ml-2 h-5 w-5" />
-            </button>
+            </Link>
           </form>
           
           <p className="mt-4 text-blue-200 text-sm">No credit card required. Start with a free account.</p>
@@ -431,7 +430,7 @@ const WealthPulseLanding = () => {
         </div>
         
         <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-gray-800 text-sm text-center">
-          <p>&copy; {new Date().getFullYear()} WealthPulse. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} WealthPulse. All rights reserved.</p>
         </div>
       </footer>
     </div>

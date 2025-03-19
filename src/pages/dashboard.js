@@ -1,154 +1,299 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
 import { PieChart, Pie, Cell, Legend, Sector } from 'recharts';
 import { Calendar, ChevronLeft, ChevronRight, DollarSign, Target, PlusCircle, LogOut, TrendingUp, Briefcase, Landmark, Home, Database } from 'lucide-react';
+import { auth, db } from '../firebase/config';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const WealthPulseDashboard = () => {
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAddDataModal, setShowAddDataModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [userData, setUserData] = useState({
     goal: null,
-    monthlyData: {}
+    monthlyData: {},
+    assets: null, // Added to store assets field for backward compatibility
   });
-  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Fetch user data from Firestore on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({
+            goal: data.goal || null,
+            monthlyData: data.monthlyData || {},
+            assets: data.assets || null, // Fetch assets field
+          });
+        } else {
+          setUserData({
+            goal: null,
+            monthlyData: {},
+            assets: null,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError('Failed to load user data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/'); // Changed from '/logout' to '/'
+    } catch (err) {
+      console.error('Error signing out:', err);
+      alert('Failed to sign out. Please try again.');
+    }
+  };
+
   // Format date as YYYY-MM
   const formatYearMonth = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
-  
+
   // Get current month data or initialize it if it doesn't exist
   const getCurrentMonthData = () => {
     const monthKey = formatYearMonth(currentMonth);
-    if (!userData.monthlyData[monthKey]) {
+    if (userData.monthlyData && userData.monthlyData[monthKey]) {
+      return userData.monthlyData[monthKey];
+    }
+
+    // Fallback to assets field if monthlyData for the current month doesn't exist
+    if (userData.assets) {
+      const aggregatedAssets = {
+        savings: 0,
+        fd: 0,
+        stocks: 0,
+        mutualFunds: 0,
+        nps: 0,
+        ppf: 0,
+        epfo: 0,
+        crypto: 0,
+        gold: 0,
+        realEstate: 0,
+      };
+
+      // Process liquid assets
+      if (userData.assets.liquid) {
+        userData.assets.liquid.forEach(asset => {
+          if (asset.type === 'Savings Account') {
+            aggregatedAssets.savings += asset.value;
+          } else if (asset.type === 'Fixed Deposit') {
+            aggregatedAssets.fd += asset.value;
+          }
+        });
+      }
+
+      // Process investments
+      if (userData.assets.investments) {
+        userData.assets.investments.forEach(investment => {
+          if (investment.type === 'Stocks') {
+            aggregatedAssets.stocks += investment.value;
+          } else if (investment.type === 'Mutual Funds') {
+            aggregatedAssets.mutualFunds += investment.value;
+          } else if (investment.type === 'NPS') {
+            aggregatedAssets.nps += investment.value;
+          } else if (investment.type === 'PPF') {
+            aggregatedAssets.ppf += investment.value;
+          } else if (investment.type === 'EPFO') {
+            aggregatedAssets.epfo += investment.value;
+          } else if (investment.type === 'Crypto') {
+            aggregatedAssets.crypto += investment.value;
+          }
+        });
+      }
+
+      // Process physical assets
+      if (userData.assets.physical) {
+        userData.assets.physical.forEach(asset => {
+          if (asset.type === 'Gold') {
+            aggregatedAssets.gold += asset.value;
+          } else if (asset.type === 'Land/Property') {
+            aggregatedAssets.realEstate += asset.value;
+          }
+        });
+      }
+
+      const totalNetWorth = Object.values(aggregatedAssets).reduce((sum, value) => sum + value, 0);
+
       return {
-        totalNetWorth: 0,
-        assets: {
-          // Liquid assets
-          savings: 0,
-          fd: 0,
-          
-          // Investments
-          stocks: 0,
-          mutualFunds: 0,
-          nps: 0,
-          ppf: 0,
-          epfo: 0,
-          crypto: 0,
-          
-          // Physical assets
-          gold: 0,
-          realEstate: 0
-        }
+        totalNetWorth: totalNetWorth,
+        assets: aggregatedAssets,
       };
     }
-    return userData.monthlyData[monthKey];
+
+    // Default if neither monthlyData nor assets exists
+    return {
+      totalNetWorth: 0,
+      assets: {
+        savings: 0,
+        fd: 0,
+        stocks: 0,
+        mutualFunds: 0,
+        nps: 0,
+        ppf: 0,
+        epfo: 0,
+        crypto: 0,
+        gold: 0,
+        realEstate: 0,
+      },
+    };
   };
-  
+
   const currentMonthData = getCurrentMonthData();
-  
+
   // Calculate category totals
   const liquidAssets = currentMonthData.assets.savings + currentMonthData.assets.fd;
-  const investmentAssets = currentMonthData.assets.stocks + currentMonthData.assets.mutualFunds + 
-                           currentMonthData.assets.nps + currentMonthData.assets.ppf + 
+  const investmentAssets = currentMonthData.assets.stocks + currentMonthData.assets.mutualFunds +
+                           currentMonthData.assets.nps + currentMonthData.assets.ppf +
                            currentMonthData.assets.epfo + currentMonthData.assets.crypto;
   const physicalAssets = currentMonthData.assets.gold + currentMonthData.assets.realEstate;
-  
+
   // Calculate total net worth
   const totalNetWorth = liquidAssets + investmentAssets + physicalAssets;
-  
+
   // Prepare data for charts - categorized
   const pieChartData = [
     { name: 'Liquid Assets', value: liquidAssets },
     { name: 'Investments', value: investmentAssets },
-    { name: 'Physical Assets', value: physicalAssets }
+    { name: 'Physical Assets', value: physicalAssets },
   ].filter(item => item.value > 0);
-  
+
   // Get all months with data for the trend chart up to current view month
   const trendData = Object.entries(userData.monthlyData)
     .filter(([month]) => month <= formatYearMonth(currentMonth))
     .map(([month, data]) => {
-      // Calculate totals for each category
       const liquid = data.assets.savings + (data.assets.fd || 0);
-      const investments = (data.assets.stocks || 0) + (data.assets.mutualFunds || 0) + 
-                         (data.assets.nps || 0) + (data.assets.ppf || 0) + 
+      const investments = (data.assets.stocks || 0) + (data.assets.mutualFunds || 0) +
+                         (data.assets.nps || 0) + (data.assets.ppf || 0) +
                          (data.assets.epfo || 0) + (data.assets.crypto || 0);
       const physical = (data.assets.gold || 0) + (data.assets.realEstate || 0);
       const total = liquid + investments + physical;
-      
-      // Format month for display
+
       const [year, monthNum] = month.split('-');
       const displayMonth = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('en-US', { month: 'short' });
-      
+
       return {
         month: displayMonth,
         rawMonth: month,
-        netWorth: total
+        netWorth: total,
       };
     }).sort((a, b) => a.rawMonth.localeCompare(b.rawMonth));
-  
+
   // Handle navigation to previous month
   const goToPreviousMonth = () => {
     const prevMonth = new Date(currentMonth);
     prevMonth.setMonth(prevMonth.getMonth() - 1);
     setCurrentMonth(prevMonth);
   };
-  
+
   // Handle navigation to next month
   const goToNextMonth = () => {
     const nextMonth = new Date(currentMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     const today = new Date();
-    
-    // Don't allow navigation to future months
+
     if (nextMonth <= today) {
       setCurrentMonth(nextMonth);
     }
   };
-  
+
   // Determine if we're viewing the current month
   const isCurrentMonth = () => {
     const today = new Date();
-    return currentMonth.getMonth() === today.getMonth() && 
+    return currentMonth.getMonth() === today.getMonth() &&
            currentMonth.getFullYear() === today.getFullYear();
   };
-  
+
   // Handle form submission for adding new data
-  const handleAddData = (newData) => {
+  const handleAddData = async (newData) => {
     const monthKey = formatYearMonth(currentMonth);
-    setUserData(prevData => ({
-      ...prevData,
+    const updatedUserData = {
+      ...userData,
       monthlyData: {
-        ...prevData.monthlyData,
+        ...userData.monthlyData,
         [monthKey]: {
           assets: newData,
-          totalNetWorth: Object.values(newData).reduce((sum, value) => sum + value, 0)
-        }
-      }
-    }));
+          totalNetWorth: Object.values(newData).reduce((sum, value) => sum + value, 0),
+        },
+      },
+    };
+
+    setUserData(updatedUserData);
     setShowAddDataModal(false);
+
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
+          monthlyData: updatedUserData.monthlyData,
+          goal: updatedUserData.goal,
+        }, { merge: true });
+      } catch (err) {
+        console.error('Error saving monthly data:', err);
+        alert('Failed to save data. Please try again.');
+      }
+    }
   };
-  
+
   // Handle setting a financial goal
-  const handleSetGoal = (goal) => {
-    setUserData(prevData => ({
-      ...prevData,
-      goal
-    }));
+  const handleSetGoal = async (goal) => {
+    const updatedUserData = {
+      ...userData,
+      goal,
+    };
+
+    setUserData(updatedUserData);
     setShowGoalModal(false);
+
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
+          monthlyData: updatedUserData.monthlyData,
+          goal: updatedUserData.goal,
+        }, { merge: true });
+      } catch (err) {
+        console.error('Error saving goal:', err);
+        alert('Failed to save goal. Please try again.');
+      }
+    }
   };
-  
+
   // Active pie sector for better visualization
   const [activeIndex, setActiveIndex] = useState(0);
-  
+
   const onPieEnter = (_, index) => {
     setActiveIndex(index);
   };
-  
-  // Render active shape for pie chart
+
   const renderActiveShape = (props) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-  
+
     return (
       <g>
         <text x={cx} y={cy - 20} dy={8} textAnchor="middle" fill="#333" fontSize="16px" fontWeight="bold">
@@ -181,28 +326,24 @@ const WealthPulseDashboard = () => {
       </g>
     );
   };
-  
-  // Colors for the pie chart
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-  
-  // Format currency for display
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
   };
-  
-  // Calculate goal progress
+
   const goalProgress = userData.goal ? Math.min(100, Math.round((totalNetWorth / userData.goal) * 100)) : 0;
-  
-  // Group assets by category for the breakdown
+
   const assetCategories = {
     'Liquid Assets': {
       'Savings Account': currentMonthData.assets.savings,
-      'Fixed Deposits': currentMonthData.assets.fd
+      'Fixed Deposits': currentMonthData.assets.fd,
     },
     'Investments': {
       'Stocks': currentMonthData.assets.stocks,
@@ -210,14 +351,22 @@ const WealthPulseDashboard = () => {
       'NPS': currentMonthData.assets.nps,
       'PPF': currentMonthData.assets.ppf,
       'EPFO': currentMonthData.assets.epfo,
-      'Crypto': currentMonthData.assets.crypto
+      'Crypto': currentMonthData.assets.crypto,
     },
     'Physical Assets': {
       'Gold': currentMonthData.assets.gold,
-      'Real Estate': currentMonthData.assets.realEstate
-    }
+      'Real Estate': currentMonthData.assets.realEstate,
+    },
   };
-  
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Navbar */}
@@ -227,21 +376,22 @@ const WealthPulseDashboard = () => {
           <span className="text-2xl font-bold text-gray-800">WealthPulse</span>
         </div>
         <div className="flex items-center space-x-4">
-          <button 
-            onClick={() => setShowGoalModal(true)} 
+          <button
+            onClick={() => setShowGoalModal(true)}
             className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <Target className="mr-2 h-4 w-4" />
             Set Goal
           </button>
-          <button 
-            onClick={() => setShowAddDataModal(true)} 
+          <button
+            onClick={() => setShowAddDataModal(true)}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add New Data
           </button>
-          <button 
+          <button
+            onClick={handleLogout}
             className="flex items-center px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <LogOut className="mr-2 h-4 w-4" />
@@ -249,15 +399,15 @@ const WealthPulseDashboard = () => {
           </button>
         </div>
       </nav>
-      
+
       {/* Main Content */}
       <div className="flex-1 p-6">
         {/* Month Navigation */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Financial Dashboard</h1>
           <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
-            <button 
-              onClick={goToPreviousMonth} 
+            <button
+              onClick={goToPreviousMonth}
               className="p-1 rounded-md hover:bg-gray-100"
             >
               <ChevronLeft className="h-5 w-5 text-gray-600" />
@@ -268,8 +418,8 @@ const WealthPulseDashboard = () => {
                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </span>
             </div>
-            <button 
-              onClick={goToNextMonth} 
+            <button
+              onClick={goToNextMonth}
               className="p-1 rounded-md hover:bg-gray-100"
               disabled={currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear()}
             >
@@ -277,7 +427,7 @@ const WealthPulseDashboard = () => {
             </button>
           </div>
         </div>
-        
+
         {/* Goal Progress - Only show for current month */}
         {userData.goal && isCurrentMonth() && (
           <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
@@ -286,8 +436,8 @@ const WealthPulseDashboard = () => {
               <span className="text-blue-600 font-medium">{goalProgress}% Complete</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-blue-600 h-2.5 rounded-full" 
+              <div
+                className="bg-blue-600 h-2.5 rounded-full"
                 style={{ width: `${goalProgress}%` }}
               ></div>
             </div>
@@ -297,7 +447,7 @@ const WealthPulseDashboard = () => {
             </div>
           </div>
         )}
-        
+
         {/* Net Worth Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -348,7 +498,7 @@ const WealthPulseDashboard = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Net Worth Trend */}
@@ -368,19 +518,19 @@ const WealthPulseDashboard = () => {
                     <Label value="Net Worth ($)" position="left" angle={-90} offset={-15} />
                   </YAxis>
                   <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="netWorth" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2} 
-                    dot={false} 
+                  <Line
+                    type="monotone"
+                    dataKey="netWorth"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
-          
+
           {/* Asset Distribution */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Distribution</h2>
@@ -406,7 +556,7 @@ const WealthPulseDashboard = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Asset Breakdown Table */}
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Breakdown</h2>
@@ -422,15 +572,14 @@ const WealthPulseDashboard = () => {
               </thead>
               <tbody>
                 {Object.entries(assetCategories).map(([category, assets]) => (
-                  // Map through each category and its assets
                   Object.entries(assets).map(([assetName, value], index) => (
-                    <tr 
-                      key={`${category}-${assetName}`} 
+                    <tr
+                      key={`${category}-${assetName}`}
                       className={`border-b last:border-0 hover:bg-gray-50 ${index === 0 ? 'border-t-4 border-t-gray-100' : ''}`}
                     >
                       {index === 0 ? (
-                        <td 
-                          className="p-3 font-medium" 
+                        <td
+                          className="p-3 font-medium"
                           rowSpan={Object.keys(assets).length}
                         >
                           {category}
@@ -461,28 +610,28 @@ const WealthPulseDashboard = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Add Data Modal */}
       {showAddDataModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <AddDataForm 
-              initialData={currentMonthData.assets} 
-              onSubmit={handleAddData} 
-              onCancel={() => setShowAddDataModal(false)} 
+            <AddDataForm
+              initialData={currentMonthData.assets}
+              onSubmit={handleAddData}
+              onCancel={() => setShowAddDataModal(false)}
             />
           </div>
         </div>
       )}
-      
+
       {/* Set Goal Modal */}
       {showGoalModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <SetGoalForm 
-              initialGoal={userData.goal} 
-              onSubmit={handleSetGoal} 
-              onCancel={() => setShowGoalModal(false)} 
+            <SetGoalForm
+              initialGoal={userData.goal}
+              onSubmit={handleSetGoal}
+              onCancel={() => setShowGoalModal(false)}
             />
           </div>
         </div>
@@ -494,24 +643,18 @@ const WealthPulseDashboard = () => {
 // Add Data Form Component
 const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
-    // Liquid assets
     savings: initialData.savings || 0,
     fd: initialData.fd || 0,
-    
-    // Investments
     stocks: initialData.stocks || 0,
     mutualFunds: initialData.mutualFunds || 0,
     nps: initialData.nps || 0,
     ppf: initialData.ppf || 0,
     epfo: initialData.epfo || 0,
     crypto: initialData.crypto || 0,
-    
-    // Physical assets
     gold: initialData.gold || 0,
-    realEstate: initialData.realEstate || 0
+    realEstate: initialData.realEstate || 0,
   });
-  
-  // Separate state to track input field values as strings
+
   const [inputValues, setInputValues] = useState({
     savings: initialData.savings ? initialData.savings.toString() : '',
     fd: initialData.fd ? initialData.fd.toString() : '',
@@ -522,48 +665,45 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
     epfo: initialData.epfo ? initialData.epfo.toString() : '',
     crypto: initialData.crypto ? initialData.crypto.toString() : '',
     gold: initialData.gold ? initialData.gold.toString() : '',
-    realEstate: initialData.realEstate ? initialData.realEstate.toString() : ''
+    realEstate: initialData.realEstate ? initialData.realEstate.toString() : '',
   });
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Update the input field value as a string
+
     setInputValues(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
-    // Update the actual form data with proper number conversion
+
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? 0 : parseFloat(value) || 0
+      [name]: value === '' ? 0 : parseFloat(value) || 0,
     }));
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-800">Update Asset Values</h2>
-        <button 
-          type="button" 
-          onClick={onCancel} 
+        <button
+          type="button"
+          onClick={onCancel}
           className="text-gray-500 hover:text-gray-700"
         >
           ×
         </button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Liquid Assets */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Liquid Assets</h3>
-          
           <div>
             <label className="block text-gray-700 mb-1">Savings Account</label>
             <div className="relative">
@@ -577,7 +717,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">Fixed Deposits</label>
             <div className="relative">
@@ -592,11 +731,10 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
             </div>
           </div>
         </div>
-        
+
         {/* Investments */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Investments</h3>
-          
           <div>
             <label className="block text-gray-700 mb-1">Stocks</label>
             <div className="relative">
@@ -610,7 +748,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">Mutual Funds</label>
             <div className="relative">
@@ -625,11 +762,10 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
             </div>
           </div>
         </div>
-        
+
         {/* More Investments */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">More Investments</h3>
-          
           <div>
             <label className="block text-gray-700 mb-1">NPS</label>
             <div className="relative">
@@ -643,7 +779,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">PPF</label>
             <div className="relative">
@@ -657,7 +792,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">EPFO</label>
             <div className="relative">
@@ -671,7 +805,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">Crypto</label>
             <div className="relative">
@@ -686,11 +819,10 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
             </div>
           </div>
         </div>
-        
+
         {/* Physical Assets */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Physical Assets</h3>
-          
           <div>
             <label className="block text-gray-700 mb-1">Gold</label>
             <div className="relative">
@@ -704,7 +836,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
               />
             </div>
           </div>
-          
           <div>
             <label className="block text-gray-700 mb-1">Real Estate</label>
             <div className="relative">
@@ -720,7 +851,7 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           </div>
         </div>
       </div>
-      
+
       <div className="flex justify-end space-x-3 mt-6">
         <button
           type="button"
@@ -743,29 +874,29 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
 // Set Goal Form Component
 const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
   const [goal, setGoal] = useState(initialGoal || 0);
-  
+
   const handleChange = (e) => {
     setGoal(parseFloat(e.target.value) || 0);
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(goal);
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-800">Set Financial Goal</h2>
-        <button 
-          type="button" 
-          onClick={onCancel} 
+        <button
+          type="button"
+          onClick={onCancel}
           className="text-gray-500 hover:text-gray-700"
         >
           ×
         </button>
       </div>
-      
+
       <div className="mb-6">
         <label className="block text-gray-700 mb-2">Target Net Worth</label>
         <div className="relative">
@@ -780,7 +911,7 @@ const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
         </div>
         <p className="text-sm text-gray-500 mt-2">Set a realistic financial goal that you want to achieve</p>
       </div>
-      
+
       <div className="flex justify-end space-x-3">
         <button
           type="button"
