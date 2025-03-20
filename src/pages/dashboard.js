@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
 import { PieChart, Pie, Cell, Legend, Sector } from 'recharts';
-import { Calendar, ChevronLeft, ChevronRight, DollarSign, Target, PlusCircle, LogOut, TrendingUp, Briefcase, Landmark, Home, Database } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, DollarSign, Target, PlusCircle, LogOut, TrendingUp, Briefcase, Landmark, Home } from 'lucide-react';
 import { auth, db } from '../firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -37,11 +37,31 @@ const WealthPulseDashboard = () => {
           const userData = docSnap.data();
           setUserData(userData);
 
+          // Set the view to the most recent month with data
+          if (userData.monthlyData) {
+            const monthKeys = Object.keys(userData.monthlyData).sort();
+            if (monthKeys.length > 0) {
+              const lastMonthKey = monthKeys[monthKeys.length - 1];
+              const [year, month] = lastMonthKey.split('-');
+              setCurrentMonth(new Date(parseInt(year), parseInt(month) - 1));
+            }
+          }
+
           // Create or update snapshot for the current month
-          const monthKey = formatYearMonth(new Date());
-          if (!userData.monthlyData || !userData.monthlyData[monthKey]) {
-            const assets = userData.assets || {};
-            const totalNetWorth = Object.values(assets).reduce((sum, value) => sum + value, 0);
+          const currentMonthKey = formatYearMonth(new Date());
+          if (!userData.monthlyData || !userData.monthlyData[currentMonthKey]) {
+            // Get the most recent previous month's data
+            const monthKeys = Object.keys(userData.monthlyData || {}).sort();
+            const lastMonthKey = monthKeys.length > 0 ? monthKeys[monthKeys.length - 1] : null;
+
+            let assets = {};
+            if (lastMonthKey && userData.monthlyData[lastMonthKey]) {
+              assets = { ...userData.monthlyData[lastMonthKey].assets } || {};
+            } else {
+              assets = userData.assets || {};
+            }
+
+            const totalNetWorth = Object.values(assets).reduce((sum, value) => sum + (value || 0), 0);
 
             const liquidAssets = (assets.savings || 0) + (assets.fd || 0);
             const investmentAssets = (assets.stocks || 0) + (assets.mutualFunds || 0) +
@@ -50,9 +70,9 @@ const WealthPulseDashboard = () => {
             const physicalAssets = (assets.gold || 0) + (assets.realEstate || 0);
 
             const assetDistribution = {
-              liquidAssets: ((liquidAssets / totalNetWorth) * 100).toFixed(1),
-              investments: ((investmentAssets / totalNetWorth) * 100).toFixed(1),
-              physicalAssets: ((physicalAssets / totalNetWorth) * 100).toFixed(1),
+              liquidAssets: totalNetWorth > 0 ? ((liquidAssets / totalNetWorth) * 100).toFixed(1) : 0,
+              investments: totalNetWorth > 0 ? ((investmentAssets / totalNetWorth) * 100).toFixed(1) : 0,
+              physicalAssets: totalNetWorth > 0 ? ((physicalAssets / totalNetWorth) * 100).toFixed(1) : 0,
             };
 
             const assetBreakdown = {
@@ -84,11 +104,11 @@ const WealthPulseDashboard = () => {
             await setDoc(userDocRef, {
               monthlyData: {
                 ...userData.monthlyData,
-                [monthKey]: snapshotData,
+                [currentMonthKey]: snapshotData,
               },
             }, { merge: true });
 
-            console.log(`Snapshot for ${monthKey} created or updated.`);
+            console.log(`Snapshot for ${currentMonthKey} created or updated with previous data.`);
           }
         }
       } catch (err) {
@@ -106,7 +126,7 @@ const WealthPulseDashboard = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/'); // Changed from '/logout' to '/'
+      navigate('/');
     } catch (err) {
       console.error('Error signing out:', err);
       alert('Failed to sign out. Please try again.');
@@ -126,6 +146,19 @@ const WealthPulseDashboard = () => {
     return formattedCurrentMonth < formattedToday;
   };
 
+  // Check if previous month has data
+  const isPreviousMonthAvailable = () => {
+    if (!userData.monthlyData) return false;
+
+    const monthKeys = Object.keys(userData.monthlyData).sort();
+    if (monthKeys.length === 0) return false;
+
+    const earliestMonth = monthKeys[0];
+    const currentMonthKey = formatYearMonth(currentMonth);
+
+    return currentMonthKey > earliestMonth;
+  };
+
   // Get current month data or initialize it if it doesn't exist
   const getCurrentMonthData = () => {
     const monthKey = formatYearMonth(currentMonth);
@@ -134,7 +167,6 @@ const WealthPulseDashboard = () => {
       return userData.monthlyData[monthKey];
     }
 
-    // Return blank data if no snapshot exists for the selected month
     return {
       totalNetWorth: 0,
       assets: {
@@ -178,11 +210,11 @@ const WealthPulseDashboard = () => {
   const currentMonthData = getCurrentMonthData();
 
   // Calculate category totals
-  const liquidAssets = currentMonthData.assets.savings + currentMonthData.assets.fd;
-  const investmentAssets = currentMonthData.assets.stocks + currentMonthData.assets.mutualFunds +
-                           currentMonthData.assets.nps + currentMonthData.assets.ppf +
-                           currentMonthData.assets.epfo + currentMonthData.assets.crypto;
-  const physicalAssets = currentMonthData.assets.gold + currentMonthData.assets.realEstate;
+  const liquidAssets = (currentMonthData.assets.savings || 0) + (currentMonthData.assets.fd || 0);
+  const investmentAssets = (currentMonthData.assets.stocks || 0) + (currentMonthData.assets.mutualFunds || 0) +
+                           (currentMonthData.assets.nps || 0) + (currentMonthData.assets.ppf || 0) +
+                           (currentMonthData.assets.epfo || 0) + (currentMonthData.assets.crypto || 0);
+  const physicalAssets = (currentMonthData.assets.gold || 0) + (currentMonthData.assets.realEstate || 0);
 
   // Calculate total net worth
   const totalNetWorth = liquidAssets + investmentAssets + physicalAssets;
@@ -195,10 +227,10 @@ const WealthPulseDashboard = () => {
   ].filter(item => item.value > 0);
 
   // Get all months with data for the trend chart up to current view month
-  const trendData = Object.entries(userData.monthlyData)
+  const trendData = Object.entries(userData.monthlyData || {})
     .filter(([month]) => month <= formatYearMonth(currentMonth))
     .map(([month, data]) => {
-      const liquid = data.assets.savings + (data.assets.fd || 0);
+      const liquid = (data.assets.savings || 0) + (data.assets.fd || 0);
       const investments = (data.assets.stocks || 0) + (data.assets.mutualFunds || 0) +
                          (data.assets.nps || 0) + (data.assets.ppf || 0) +
                          (data.assets.epfo || 0) + (data.assets.crypto || 0);
@@ -217,9 +249,11 @@ const WealthPulseDashboard = () => {
 
   // Handle navigation to previous month
   const goToPreviousMonth = () => {
-    const prevMonth = new Date(currentMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
-    setCurrentMonth(prevMonth);
+    if (isPreviousMonthAvailable()) {
+      const prevMonth = new Date(currentMonth);
+      prevMonth.setMonth(prevMonth.getMonth() - 1);
+      setCurrentMonth(prevMonth);
+    }
   };
 
   // Handle navigation to next month
@@ -249,7 +283,7 @@ const WealthPulseDashboard = () => {
         ...userData.monthlyData,
         [monthKey]: {
           assets: newData,
-          totalNetWorth: Object.values(newData).reduce((sum, value) => sum + value, 0),
+          totalNetWorth: Object.values(newData).reduce((sum, value) => sum + (value || 0), 0),
         },
       },
     };
@@ -283,7 +317,7 @@ const WealthPulseDashboard = () => {
         ...userData.monthlyData,
         [monthKey]: {
           ...userData.monthlyData[monthKey],
-          goal, // Optionally store the goal in the snapshot
+          goal,
         },
       },
     };
@@ -359,27 +393,27 @@ const WealthPulseDashboard = () => {
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const goalProgress = userData.goal ? Math.min(100, Math.round((totalNetWorth / userData.goal) * 100)) : 0;
 
   const assetCategories = {
     'Liquid Assets': {
-      'Savings Account': currentMonthData.assets.savings,
-      'Fixed Deposits': currentMonthData.assets.fd,
+      'Savings Account': currentMonthData.assets.savings || 0,
+      'Fixed Deposits': currentMonthData.assets.fd || 0,
     },
     'Investments': {
-      'Stocks': currentMonthData.assets.stocks,
-      'Mutual Funds': currentMonthData.assets.mutualFunds,
-      'NPS': currentMonthData.assets.nps,
-      'PPF': currentMonthData.assets.ppf,
-      'EPFO': currentMonthData.assets.epfo,
-      'Crypto': currentMonthData.assets.crypto,
+      'Stocks': currentMonthData.assets.stocks || 0,
+      'Mutual Funds': currentMonthData.assets.mutualFunds || 0,
+      'NPS': currentMonthData.assets.nps || 0,
+      'PPF': currentMonthData.assets.ppf || 0,
+      'EPFO': currentMonthData.assets.epfo || 0,
+      'Crypto': currentMonthData.assets.crypto || 0,
     },
     'Physical Assets': {
-      'Gold': currentMonthData.assets.gold,
-      'Real Estate': currentMonthData.assets.realEstate,
+      'Gold': currentMonthData.assets.gold || 0,
+      'Real Estate': currentMonthData.assets.realEstate || 0,
     },
   };
 
@@ -400,7 +434,6 @@ const WealthPulseDashboard = () => {
           <span className="text-2xl font-bold text-gray-800">WealthPulse</span>
         </div>
         <div className="flex items-center space-x-4">
-          {/* Conditionally render the Set Goal button */}
           {!isPastMonth() && (
             <button
               onClick={() => setShowGoalModal(true)}
@@ -410,7 +443,6 @@ const WealthPulseDashboard = () => {
               Set Goal
             </button>
           )}
-          {/* Conditionally render the Add New Data button */}
           {!isPastMonth() && (
             <button
               onClick={() => setShowAddDataModal(true)}
@@ -420,7 +452,6 @@ const WealthPulseDashboard = () => {
               Add New Data
             </button>
           )}
-          {/* Logout button with red color */}
           <button
             onClick={handleLogout}
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -441,15 +472,18 @@ const WealthPulseDashboard = () => {
                 Hi {userData.displayName?.split(' ')[0] || 'there'}, your current net worth is {formatCurrency(totalNetWorth)} as of today.
               </h1>
             ) : (
-              <div className="h-10"></div> // Placeholder to maintain consistent height
+              <div className="h-10"></div>
             )}
           </div>
           <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
             <button
               onClick={goToPreviousMonth}
               className="p-1 rounded-md hover:bg-gray-100"
+              disabled={!isPreviousMonthAvailable()}
             >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
+              <ChevronLeft
+                className={`h-5 w-5 ${!isPreviousMonthAvailable() ? 'text-gray-300' : 'text-gray-600'}`}
+              />
             </button>
             <div className="flex items-center px-2">
               <Calendar className="h-4 w-4 text-gray-600 mr-2" />
@@ -474,7 +508,7 @@ const WealthPulseDashboard = () => {
           </div>
         </div>
 
-        {/* Goal Progress - Only show for current month */}
+        {/* Goal Progress */}
         {userData.goal && isCurrentMonth() && (
           <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
             <div className="flex justify-between items-center mb-2">
@@ -547,7 +581,6 @@ const WealthPulseDashboard = () => {
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Net Worth Trend */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Net Worth Trend</h2>
             <div className="h-64">
@@ -577,7 +610,6 @@ const WealthPulseDashboard = () => {
             </div>
           </div>
 
-          {/* Asset Distribution */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Distribution</h2>
             <div className="h-64">
@@ -747,7 +779,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Liquid Assets */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Liquid Assets</h3>
           <div>
@@ -778,7 +809,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* Investments */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Investments</h3>
           <div>
@@ -809,7 +839,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* More Investments */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">More Investments</h3>
           <div>
@@ -866,7 +895,6 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* Physical Assets */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-700">Physical Assets</h3>
           <div>
@@ -919,11 +947,10 @@ const AddDataForm = ({ initialData, onSubmit, onCancel }) => {
 
 // Set Goal Form Component
 const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
-  const [goal, setGoal] = useState(initialGoal !== null ? initialGoal.toString() : ""); // Initialize as a string
+  const [goal, setGoal] = useState(initialGoal !== null ? initialGoal.toString() : "");
 
   const handleChange = (e) => {
     const value = e.target.value;
-    // Allow empty string or a valid number
     if (value === "" || !isNaN(value)) {
       setGoal(value);
     }
@@ -931,7 +958,6 @@ const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Convert the goal to a number before submitting, or set it to null if empty
     onSubmit(goal === "" ? null : parseFloat(goal));
   };
 
@@ -953,7 +979,7 @@ const SetGoalForm = ({ initialGoal, onSubmit, onCancel }) => {
         <div className="relative">
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
           <input
-            type="text" // Use text input to allow clearing
+            type="text"
             value={goal}
             onChange={handleChange}
             className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
