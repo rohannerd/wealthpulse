@@ -28,53 +28,46 @@ const WealthPulseDashboard = () => {
         navigate('/login');
         return;
       }
-
+  
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userDocRef);
-
+  
         if (docSnap.exists()) {
           const userData = docSnap.data();
           setUserData(userData);
-
-          // Set the view to the most recent month with data
-          if (userData.monthlyData) {
-            const monthKeys = Object.keys(userData.monthlyData).sort();
-            if (monthKeys.length > 0) {
-              const lastMonthKey = monthKeys[monthKeys.length - 1];
-              const [year, month] = lastMonthKey.split('-');
-              setCurrentMonth(new Date(parseInt(year), parseInt(month) - 1));
-            }
-          }
-
+  
           // Create or update snapshot for the current month
-          const currentMonthKey = formatYearMonth(new Date());
+          const currentDate = new Date(); // Current date (e.g., April 15, 2025)
+          const currentMonthKey = formatYearMonth(currentDate);
+          let updatedUserData = { ...userData };
+  
           if (!userData.monthlyData || !userData.monthlyData[currentMonthKey]) {
             // Get the most recent previous month's data
             const monthKeys = Object.keys(userData.monthlyData || {}).sort();
             const lastMonthKey = monthKeys.length > 0 ? monthKeys[monthKeys.length - 1] : null;
-
+  
             let assets = {};
             if (lastMonthKey && userData.monthlyData[lastMonthKey]) {
               assets = { ...userData.monthlyData[lastMonthKey].assets } || {};
             } else {
               assets = userData.assets || {};
             }
-
+  
             const totalNetWorth = Object.values(assets).reduce((sum, value) => sum + (value || 0), 0);
-
+  
             const liquidAssets = (assets.savings || 0) + (assets.fd || 0);
             const investmentAssets = (assets.stocks || 0) + (assets.mutualFunds || 0) +
                                      (assets.nps || 0) + (assets.ppf || 0) +
                                      (assets.epfo || 0) + (assets.crypto || 0);
             const physicalAssets = (assets.gold || 0) + (assets.realEstate || 0);
-
+  
             const assetDistribution = {
               liquidAssets: totalNetWorth > 0 ? ((liquidAssets / totalNetWorth) * 100).toFixed(1) : 0,
               investments: totalNetWorth > 0 ? ((investmentAssets / totalNetWorth) * 100).toFixed(1) : 0,
               physicalAssets: totalNetWorth > 0 ? ((physicalAssets / totalNetWorth) * 100).toFixed(1) : 0,
             };
-
+  
             const assetBreakdown = {
               'Liquid Assets': {
                 'Savings Account': assets.savings || 0,
@@ -93,23 +86,36 @@ const WealthPulseDashboard = () => {
                 'Real Estate': assets.realEstate || 0,
               },
             };
-
+  
             const snapshotData = {
               assets,
               totalNetWorth,
               assetDistribution,
               assetBreakdown,
             };
-
+  
             await setDoc(userDocRef, {
               monthlyData: {
                 ...userData.monthlyData,
                 [currentMonthKey]: snapshotData,
               },
             }, { merge: true });
-
+  
             console.log(`Snapshot for ${currentMonthKey} created or updated with previous data.`);
+  
+            // Update the local userData state with the new snapshot
+            updatedUserData = {
+              ...userData,
+              monthlyData: {
+                ...userData.monthlyData,
+                [currentMonthKey]: snapshotData,
+              },
+            };
+            setUserData(updatedUserData);
           }
+  
+          // Set the view to the current month (e.g., April 2025)
+          setCurrentMonth(new Date(currentDate.getFullYear(), currentDate.getMonth()));
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -118,7 +124,7 @@ const WealthPulseDashboard = () => {
         setLoading(false);
       }
     };
-
+  
     fetchUserData();
   }, [navigate]);
 
