@@ -32,8 +32,64 @@ const WealthPulseDashboard = () => {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userDocRef);
+
         if (docSnap.exists()) {
-          setUserData(docSnap.data());
+          const userData = docSnap.data();
+          setUserData(userData);
+
+          // Create or update snapshot for the current month
+          const monthKey = formatYearMonth(new Date());
+          if (!userData.monthlyData || !userData.monthlyData[monthKey]) {
+            const assets = userData.assets || {};
+            const totalNetWorth = Object.values(assets).reduce((sum, value) => sum + value, 0);
+
+            const liquidAssets = (assets.savings || 0) + (assets.fd || 0);
+            const investmentAssets = (assets.stocks || 0) + (assets.mutualFunds || 0) +
+                                     (assets.nps || 0) + (assets.ppf || 0) +
+                                     (assets.epfo || 0) + (assets.crypto || 0);
+            const physicalAssets = (assets.gold || 0) + (assets.realEstate || 0);
+
+            const assetDistribution = {
+              liquidAssets: ((liquidAssets / totalNetWorth) * 100).toFixed(1),
+              investments: ((investmentAssets / totalNetWorth) * 100).toFixed(1),
+              physicalAssets: ((physicalAssets / totalNetWorth) * 100).toFixed(1),
+            };
+
+            const assetBreakdown = {
+              'Liquid Assets': {
+                'Savings Account': assets.savings || 0,
+                'Fixed Deposits': assets.fd || 0,
+              },
+              'Investments': {
+                'Stocks': assets.stocks || 0,
+                'Mutual Funds': assets.mutualFunds || 0,
+                'NPS': assets.nps || 0,
+                'PPF': assets.ppf || 0,
+                'EPFO': assets.epfo || 0,
+                'Crypto': assets.crypto || 0,
+              },
+              'Physical Assets': {
+                'Gold': assets.gold || 0,
+                'Real Estate': assets.realEstate || 0,
+              },
+            };
+
+            const snapshotData = {
+              assets,
+              totalNetWorth,
+              assetDistribution,
+              assetBreakdown,
+            };
+
+            await setDoc(userDocRef, {
+              monthlyData: {
+                ...userData.monthlyData,
+                [monthKey]: snapshotData,
+              },
+            }, { merge: true });
+
+            console.log(`Snapshot for ${monthKey} created or updated.`);
+          }
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -73,75 +129,12 @@ const WealthPulseDashboard = () => {
   // Get current month data or initialize it if it doesn't exist
   const getCurrentMonthData = () => {
     const monthKey = formatYearMonth(currentMonth);
+
     if (userData.monthlyData && userData.monthlyData[monthKey]) {
       return userData.monthlyData[monthKey];
     }
 
-    // Fallback to assets field if monthlyData for the current month doesn't exist
-    if (userData.assets) {
-      const aggregatedAssets = {
-        savings: 0,
-        fd: 0,
-        stocks: 0,
-        mutualFunds: 0,
-        nps: 0,
-        ppf: 0,
-        epfo: 0,
-        crypto: 0,
-        gold: 0,
-        realEstate: 0,
-      };
-
-      // Process liquid assets
-      if (userData.assets.liquid) {
-        userData.assets.liquid.forEach(asset => {
-          if (asset.type === 'Savings Account') {
-            aggregatedAssets.savings += asset.value;
-          } else if (asset.type === 'Fixed Deposit') {
-            aggregatedAssets.fd += asset.value;
-          }
-        });
-      }
-
-      // Process investments
-      if (userData.assets.investments) {
-        userData.assets.investments.forEach(investment => {
-          if (investment.type === 'Stocks') {
-            aggregatedAssets.stocks += investment.value;
-          } else if (investment.type === 'Mutual Funds') {
-            aggregatedAssets.mutualFunds += investment.value;
-          } else if (investment.type === 'NPS') {
-            aggregatedAssets.nps += investment.value;
-          } else if (investment.type === 'PPF') {
-            aggregatedAssets.ppf += investment.value;
-          } else if (investment.type === 'EPFO') {
-            aggregatedAssets.epfo += investment.value;
-          } else if (investment.type === 'Crypto') {
-            aggregatedAssets.crypto += investment.value;
-          }
-        });
-      }
-
-      // Process physical assets
-      if (userData.assets.physical) {
-        userData.assets.physical.forEach(asset => {
-          if (asset.type === 'Gold') {
-            aggregatedAssets.gold += asset.value;
-          } else if (asset.type === 'Land/Property') {
-            aggregatedAssets.realEstate += asset.value;
-          }
-        });
-      }
-
-      const totalNetWorth = Object.values(aggregatedAssets).reduce((sum, value) => sum + value, 0);
-
-      return {
-        totalNetWorth: totalNetWorth,
-        assets: aggregatedAssets,
-      };
-    }
-
-    // Default if neither monthlyData nor assets exists
+    // Return blank data if no snapshot exists for the selected month
     return {
       totalNetWorth: 0,
       assets: {
@@ -155,6 +148,29 @@ const WealthPulseDashboard = () => {
         crypto: 0,
         gold: 0,
         realEstate: 0,
+      },
+      assetDistribution: {
+        liquidAssets: 0,
+        investments: 0,
+        physicalAssets: 0,
+      },
+      assetBreakdown: {
+        'Liquid Assets': {
+          'Savings Account': 0,
+          'Fixed Deposits': 0,
+        },
+        'Investments': {
+          'Stocks': 0,
+          'Mutual Funds': 0,
+          'NPS': 0,
+          'PPF': 0,
+          'EPFO': 0,
+          'Crypto': 0,
+        },
+        'Physical Assets': {
+          'Gold': 0,
+          'Real Estate': 0,
+        },
       },
     };
   };
@@ -247,8 +263,9 @@ const WealthPulseDashboard = () => {
         const userDocRef = doc(db, 'users', user.uid);
         await setDoc(userDocRef, {
           monthlyData: updatedUserData.monthlyData,
-          goal: updatedUserData.goal,
         }, { merge: true });
+
+        console.log(`Snapshot for ${monthKey} updated.`);
       } catch (err) {
         console.error('Error saving monthly data:', err);
         alert('Failed to save data. Please try again.');
@@ -258,9 +275,17 @@ const WealthPulseDashboard = () => {
 
   // Handle setting a financial goal
   const handleSetGoal = async (goal) => {
+    const monthKey = formatYearMonth(currentMonth);
     const updatedUserData = {
       ...userData,
       goal,
+      monthlyData: {
+        ...userData.monthlyData,
+        [monthKey]: {
+          ...userData.monthlyData[monthKey],
+          goal, // Optionally store the goal in the snapshot
+        },
+      },
     };
 
     setUserData(updatedUserData);
@@ -271,9 +296,11 @@ const WealthPulseDashboard = () => {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         await setDoc(userDocRef, {
-          monthlyData: updatedUserData.monthlyData,
           goal: updatedUserData.goal,
+          monthlyData: updatedUserData.monthlyData,
         }, { merge: true });
+
+        console.log(`Goal and snapshot for ${monthKey} updated.`);
       } catch (err) {
         console.error('Error saving goal:', err);
         alert('Failed to save goal. Please try again.');
@@ -373,29 +400,30 @@ const WealthPulseDashboard = () => {
           <span className="text-2xl font-bold text-gray-800">WealthPulse</span>
         </div>
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setShowGoalModal(true)}
-            className={`flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors ${
-              isPastMonth() ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            disabled={isPastMonth()}
-          >
-            <Target className="mr-2 h-4 w-4" />
-            Set Goal
-          </button>
-          <button
-            onClick={() => setShowAddDataModal(true)}
-            className={`flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${
-              isPastMonth() ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            disabled={isPastMonth()}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New Data
-          </button>
+          {/* Conditionally render the Set Goal button */}
+          {!isPastMonth() && (
+            <button
+              onClick={() => setShowGoalModal(true)}
+              className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <Target className="mr-2 h-4 w-4" />
+              Set Goal
+            </button>
+          )}
+          {/* Conditionally render the Add New Data button */}
+          {!isPastMonth() && (
+            <button
+              onClick={() => setShowAddDataModal(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Data
+            </button>
+          )}
+          {/* Logout button with red color */}
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
@@ -407,7 +435,15 @@ const WealthPulseDashboard = () => {
       <div className="flex-1 p-6">
         {/* Month Navigation */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Financial Dashboard</h1>
+          <div className="h-10 flex items-center">
+            {isCurrentMonth() ? (
+              <h1 className="text-2xl font-bold text-gray-800">
+                Hi {userData.displayName?.split(' ')[0] || 'there'}, your current net worth is {formatCurrency(totalNetWorth)} as of today.
+              </h1>
+            ) : (
+              <div className="h-10"></div> // Placeholder to maintain consistent height
+            )}
+          </div>
           <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
             <button
               onClick={goToPreviousMonth}
@@ -426,7 +462,14 @@ const WealthPulseDashboard = () => {
               className="p-1 rounded-md hover:bg-gray-100"
               disabled={currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear()}
             >
-              <ChevronRight className={`h-5 w-5 ${currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear() ? 'text-gray-300' : 'text-gray-600'}`} />
+              <ChevronRight
+                className={`h-5 w-5 ${
+                  currentMonth.getMonth() === new Date().getMonth() &&
+                  currentMonth.getFullYear() === new Date().getFullYear()
+                    ? 'text-gray-300'
+                    : 'text-gray-600'
+                }`}
+              />
             </button>
           </div>
         </div>
