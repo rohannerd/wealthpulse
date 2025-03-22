@@ -234,24 +234,26 @@ const WealthPulseDashboard = () => {
 
   // Get all months with data for the trend chart up to current view month
   const trendData = Object.entries(userData.monthlyData || {})
-    .filter(([month]) => month <= formatYearMonth(currentMonth))
-    .map(([month, data]) => {
-      const liquid = (data.assets.savings || 0) + (data.assets.fd || 0);
-      const investments = (data.assets.stocks || 0) + (data.assets.mutualFunds || 0) +
-                         (data.assets.nps || 0) + (data.assets.ppf || 0) +
-                         (data.assets.epfo || 0) + (data.assets.crypto || 0);
-      const physical = (data.assets.gold || 0) + (data.assets.realEstate || 0);
-      const total = liquid + investments + physical;
+  .filter(([month]) => month <= formatYearMonth(currentMonth))
+  .map(([month, data]) => {
+    const liquid = (data.assets.savings || 0) + (data.assets.fd || 0);
+    const investments = (data.assets.stocks || 0) + (data.assets.mutualFunds || 0) +
+                       (data.assets.nps || 0) + (data.assets.ppf || 0) +
+                       (data.assets.epfo || 0) + (data.assets.crypto || 0);
+    const physical = (data.assets.gold || 0) + (data.assets.realEstate || 0);
+    const total = liquid + investments + physical;
 
-      const [year, monthNum] = month.split('-');
-      const displayMonth = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('en-US', { month: 'short' });
+    const [year, monthNum] = month.split('-');
+    // Updated to show month with year
+    const displayMonth = new Date(parseInt(year), parseInt(monthNum) - 1)
+      .toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
-      return {
-        month: displayMonth,
-        rawMonth: month,
-        netWorth: total,
-      };
-    }).sort((a, b) => a.rawMonth.localeCompare(b.rawMonth));
+    return {
+      month: displayMonth,
+      rawMonth: month,
+      netWorth: total,
+    };
+  }).sort((a, b) => a.rawMonth.localeCompare(b.rawMonth));
 
   // Handle navigation to previous month
   const goToPreviousMonth = () => {
@@ -435,13 +437,13 @@ const WealthPulseDashboard = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Navbar */}
      
-<nav className="bg-white shadow-md px-4 sm:px-6 py-4">
+      <nav className="bg-white shadow-md px-4 sm:px-6 py-4">
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
     <div className="flex items-center">
       <TrendingUp className="text-blue-600 mr-2" />
       <span className="text-xl sm:text-2xl font-bold text-gray-800">WealthPulse</span>
     </div>
-    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+    <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
       {!isPastMonth() && (
         <button
           onClick={() => setShowGoalModal(true)}
@@ -591,34 +593,34 @@ const WealthPulseDashboard = () => {
 
         {/* Charts Row */}
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-    <h2 className="text-lg font-semibold text-gray-800 mb-4">Net Worth Trend</h2>
-    <div className="h-56 sm:h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={trendData}
-          margin={{ top: 5, right: 20, left: 10, bottom: 25 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month">
-            <Label value="Month" position="bottom" offset={0} />
-          </XAxis>
-          <YAxis>
-            <Label value="Net Worth (₹)" position="left" angle={-90} offset={-15} />
-          </YAxis>
-          <Tooltip formatter={(value) => formatCurrency(value)} />
-          <Line
-            type="monotone"
-            dataKey="netWorth"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+<div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+  <h2 className="text-lg font-semibold text-gray-800 mb-4">Net Worth Trend</h2>
+  <div className="h-56 sm:h-64">
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart
+        data={trendData}
+        margin={{ top: 5, right: 20, left: 20, bottom: 25 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="month">
+          <Label value="Month" position="bottom" offset={0} />
+        </XAxis>
+        <YAxis>
+          <Label value="Net Worth (₹)" position="left" angle={-90} offset={-30} />
+        </YAxis>
+        <Tooltip formatter={(value) => formatCurrency(value)} />
+        <Line
+          type="monotone"
+          dataKey="netWorth"
+          stroke="#3b82f6"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 6 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
   </div>
+</div>
 
   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
     <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Distribution</h2>
