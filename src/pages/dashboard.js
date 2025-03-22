@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, Legend, Sector } from 'recharts';
 import { Calendar, ChevronLeft, ChevronRight, DollarSign, Target, PlusCircle, LogOut, TrendingUp, Briefcase, Landmark, Home } from 'lucide-react';
 import { auth, db } from '../firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import EnhancedPieChart from './EnhancedPieChart'; 
 
 const WealthPulseDashboard = () => {
   const navigate = useNavigate();
@@ -606,7 +607,7 @@ const WealthPulseDashboard = () => {
           <Label value="Month" position="bottom" offset={0} />
         </XAxis>
         <YAxis>
-          <Label value="Net Worth (₹)" position="left" angle={-90} offset={-30} />
+          <Label value="Net Worth (₹)" position="left" angle={-90} offset={-10} />
         </YAxis>
         <Tooltip formatter={(value) => formatCurrency(value)} />
         <Line
@@ -622,29 +623,18 @@ const WealthPulseDashboard = () => {
   </div>
 </div>
 
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-    <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Distribution</h2>
-    <div className="h-56 sm:h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            activeIndex={activeIndex}
-            activeShape={renderActiveShape}
-            data={pieChartData}
-            innerRadius={50}
-            outerRadius={70}
-            paddingAngle={5}
-            dataKey="value"
-            onMouseEnter={onPieEnter}
-          >
-            {pieChartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
+<div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+  <h2 className="text-lg font-semibold text-gray-800 mb-4">Asset Distribution</h2>
+  <div className="h-56 sm:h-64">
+    <EnhancedPieChart 
+      data={[
+        { name: 'Liquid Assets', value: liquidAssets },
+        { name: 'Investments', value: investmentAssets },
+        { name: 'Physical Assets', value: physicalAssets },
+      ].filter(item => item.value > 0)}
+    />
   </div>
+</div>
 </div>
 
         {/* Asset Breakdown Table */}
